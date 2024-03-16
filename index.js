@@ -9,7 +9,7 @@ const config = {
   authRequired: false,
   auth0Logout: true,
   secret: 'a long, randomly-generated string stored in env',
-  baseURL: 'http://localhost:3000',
+  baseURL: 'https://lewis-tac-toe-leaderboard.azurewebsites.net/',
   clientID: 'CD0sXFYpCtwkOvGOunA7XgAfW1ETSnKR',
   issuerBaseURL: 'https://dev-dbofanjigstk56gw.us.auth0.com'
 };
@@ -33,7 +33,7 @@ app.get('/profile', requiresAuth(), (req, res) => {
 const port = process.env.PORT || 3000
 
 app.use(express.static('static'))
-app.use(cors({ origin: 'http://localhost:3001' }))
+app.use(cors({ origin: 'https://ambitious-sky-0c3e83e10.4.azurestaticapps.net/' }))
 
 let leaderboard = [];
 
