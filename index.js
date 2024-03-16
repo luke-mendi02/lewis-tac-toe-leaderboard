@@ -20,7 +20,7 @@ app.use(auth(config));
 
 // req.isAuthenticated is provided from the auth router
 app.get('/', (req, res) => {
-  res.send(req.oidc.isAuthenticated() ? 'Logged in, go to /index.html to view leaderboard' : 'Logged out, go to /login to login.');
+  res.send(req.oidc.isAuthenticated() ? 'Logged in, go to /index.html to view leaderboard' : 'Logged out, go to /login to login, or /index.html to view leaderboard.');
 });
 
 const { requiresAuth } = require('express-openid-connect');
