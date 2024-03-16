@@ -1,5 +1,5 @@
 function fetchLeaderboard() {
-  fetch('http://localhost:3000/GetLewisTacToeLeaders')
+  fetch('https://lewis-tac-toe-leaderboard.azurewebsites.net/GetLewisTacToeLeaders')
     .then(response => response.json())
     .then(data => {
       // Clear existing leaderboard
@@ -20,7 +20,7 @@ function fetchLeaderboard() {
 }
 
 function addWinOrTie() {
-  fetch('http://localhost:3000/AddWinOrTie', {
+  fetch('https://lewis-tac-toe-leaderboard.azurewebsites.net/AddWinOrTie', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
