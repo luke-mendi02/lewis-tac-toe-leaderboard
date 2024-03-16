@@ -3,139 +3,68 @@ app = express()
 
 const cors = require("cors")
 
-var url = require('url');
-var dt = require('./date-time');
+const { auth } = require('express-openid-connect');
+
+const config = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: 'a long, randomly-generated string stored in env',
+  baseURL: 'http://localhost:3000',
+  clientID: 'CD0sXFYpCtwkOvGOunA7XgAfW1ETSnKR',
+  issuerBaseURL: 'https://dev-dbofanjigstk56gw.us.auth0.com'
+};
+
+
+// auth router attaches /login, /logout, and /callback routes to the baseURL
+app.use(auth(config));
+
+// req.isAuthenticated is provided from the auth router
+app.get('/', (req, res) => {
+  res.send(req.oidc.isAuthenticated() ? 'Logged in, go to /index.html to view leaderboard' : 'Logged out, go to /login to login.');
+});
+
+const { requiresAuth } = require('express-openid-connect');
+
+app.get('/profile', requiresAuth(), (req, res) => {
+  res.send(JSON.stringify(req.oidc.user));
+  console.log(req.user);
+});
 
 const port = process.env.PORT || 3000
-const majorVersion = 1
-const minorVersion = 3
 
-// Use Express to publish static HTML, CSS, and JavaScript files that run in the browser. 
-app.use(express.static(__dirname + '/static'))
-app.use(cors({ origin: '*' }))
+app.use(express.static('static'))
+app.use(cors({ origin: 'http://localhost:3001' }))
 
-// The app.get functions below are being processed in Node.js running on the server.
-// Implement a custom About page.
-app.get('/about', (request, response) => {
-	console.log('Calling "/about" on the Node.js server.')
-	response.type('text/plain')
-	response.send('About Node.js on Azure Template.')
-})
+let leaderboard = [];
 
-app.get('/version', (request, response) => {
-	console.log('Calling "/version" on the Node.js server.')
-	response.type('text/plain')
-	response.send('Version: '+majorVersion+'.'+minorVersion)
-})
+app.get('/GetLewisTacToeLeaders', (req, res) => {
+  // Sort leaderboard data by TotalWins (descending)
+  leaderboard.sort((a, b) => b.TotalWins - a.TotalWins);
 
-app.get('/api/ping', (request, response) => {
-	console.log('Calling "/api/ping"')
-	response.type('text/plain')
-	response.send('ping response')
-})
-
-// Return the value of 2 plus 2.
-app.get('/2plus2', (request, response) => {
-	console.log('Calling "/2plus2" on the Node.js server.')
-	response.type('text/plain')
-	response.send('4')
-})
-
-// Add x and y which are both passed in on the URL. 
-app.get('/add-two-integers', (request, response) => {
-	console.log('Calling "/add-two-integers" on the Node.js server.')
-	var inputs = url.parse(request.url, true).query
-	let x = parseInt(inputs.x)
-	let y = parseInt(inputs.y)
-	let sum = x + y
-	response.type('text/plain')
-	response.send(sum.toString())
-})
-
-// Template for calculating BMI using height in feet/inches and weight in pounds.
-app.get('/calculate-bmi', (request, response) => {
-	console.log('Calling "/calculate-bmi" on the Node.js server.')
-	var inputs = url.parse(request.url, true).query
-	const heightFeet = parseInt(inputs.feet)
-	const heightInches = parseInt(inputs.inches)
-	const weight = parseInt(inputs.lbs)
-
-	console.log('Height:' + heightFeet + '\'' + heightInches + '\"')
-	console.log('Weight:' + weight + ' lbs.')
-
-	// Todo: Implement unit conversions and BMI calculations.
-	// Todo: Return BMI instead of Todo message.
-
-	response.type('text/plain')
-	response.send('Todo: Implement "/calculate-bmi"')
-})
-
-// Test a variety of functions.
-app.get('/test', (request, response) => {
-    // Write the request to the log. 
-    console.log(request);
-
-    // Return HTML.
-    response.writeHead(200, {'Content-Type': 'text/html'});
-    response.write('<h3>Testing Function</h3>')
-
-    // Access function from a separate JavaScript module.
-    response.write("The date and time are currently: " + dt.myDateTime() + "<br><br>");
-
-    // Show the full url from the request. 
-    response.write("req.url="+request.url+"<br><br>");
-
-    // Suggest adding something tl the url so that we can parse it. 
-    response.write("Consider adding '/test?year=2017&month=July' to the URL.<br><br>");
-    
-	// Parse the query string for values that are being passed on the URL.
-	var q = url.parse(request.url, true).query;
-    var txt = q.year + " " + q.month;
-    response.write("txt="+txt);
-
-    // Close the response
-    response.end('<h3>The End.</h3>');
-})
-
-// Return Batman as JSON.
-const batMan = {
-	"firstName":"Bruce",
-	"lastName":"Wayne",
-	"preferredName":"Batman",
-	"email":"darkknight@lewisu.edu",
-	"phoneNumber":"800-bat-mann",
-	"city":"Gotham",
-	"state":"NJ",
-	"zip":"07101",
-	"lat":"40.73",
-	"lng":"-74.17",
-	"favoriteHobby":"Flying",
-	"class":"cpsc-24700-001",
-	"room":"AS-104-A",
-	"startTime":"2 PM CT",
-	"seatNumber":"",
-	"inPerson":[
-		"Monday",
-		"Wednesday"
-	],
-	"virtual":[
-		"Friday"
-	]
-}
-
-app.get('/batman', (request, response) => {
-	console.log('Calling "/batman" on the Node.js server.')
-	response.type('application/json')
-	response.send(JSON.stringify(batMan))
-})
-
-// Load your JSON data
-const favoritePlaces = require('./FavoritePlaces.json');
-
-// Create a route that serves the JSON data
-app.get('/api/favorite-places', (req, res) => {
-  res.json(favoritePlaces);
+  // Return only top 3 players
+  const topPlayers = leaderboard.slice(0, 3);
+  res.json(topPlayers);
 });
+
+// POST endpoint to add win or tie for authenticated user
+app.post('/AddWinOrTie', (req, res) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  const { name } = req.oidc.user;
+
+  const index = leaderboard.findIndex(player => player.UserName === name);
+  if (index !== -1) {
+    // Increment the wins or ties for the user
+    leaderboard[index].TotalWins += 1;
+  } else {
+    // If the user is not in the leaderboard, add them with 1 win
+    leaderboard.push({ UserName: name, TotalWins: 1 });
+  }
+
+  res.status(200).send('Win or tie added successfully.');
+});
+
+
+app.options('/AddWinOrTie', cors());
 
 
 
