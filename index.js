@@ -2,8 +2,26 @@ const express = require('express')
 app = express()
 
 const cors = require("cors")
-
+const { MongoClient } = require("mongodb");
 const { auth } = require('express-openid-connect');
+
+
+// Replace the uri string with your connection string.
+const uri = "mongodb+srv://lukecmendiola:F8BSLdDgGTfXILab@lewis-leaderboard.vpljd3h.mongodb.net/?retryWrites=true&w=majority&appName=Lewis-Leaderboard";
+const client = new MongoClient(uri);
+// MongoDB setup
+async function setupMongoDB() {
+  try {
+    const database = client.db('leaderboard');
+    playerWinsCollection = database.collection('playerWins');
+    const query = { wins: 1 };
+    const wins = await playerWinsCollection.findOne(query);
+    console.log("MongoDB setup complete");
+    console.log(wins)
+  } catch (err) {
+    console.error("Error setting up MongoDB:", err);
+  }
+}
 
 const config = {
   authRequired: false,
@@ -31,26 +49,40 @@ app.get('/profile', requiresAuth(), (req, res) => {
 });
 
 const port = process.env.PORT || 3000
-
 app.use(express.static('static'))
 app.use(cors({ origin: 'https://ambitious-sky-0c3e83e10.4.azurestaticapps.net/' }))
 
 let leaderboard = [];
+// MongoDB collection reference
+let playerWinsCollection;
 
-app.get('/GetLewisTacToeLeaders', (req, res) => {
-  // Sort leaderboard data by TotalWins (descending)
-  leaderboard.sort((a, b) => b.TotalWins - a.TotalWins);
+// Function to get the player's profile and wins from MongoDB
+async function getPlayerWins(name) {
+  try {
+    const result = await playerWinsCollection.findOne({ UserName: name });
+    return result;
+  } catch (err) {
+    console.error("Error fetching player's wins:", err);
+    return null;
+  }
+}
 
-  // Return only top 3 players
-  const topPlayers = leaderboard.slice(0, 3);
-  res.json(topPlayers);
+
+app.get('/GetLewisTacToeLeaders', async (req, res) => {
+  try {
+    // Fetch the top 3 players based on TotalWins from MongoDB
+    const topPlayers = await playerWinsCollection.find().sort({ TotalWins: -1 }).limit(3).toArray();
+    res.json(topPlayers);
+  } catch (err) {
+    console.error("Error fetching top players:", err);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
 // POST endpoint to add win or tie for authenticated user
-app.post('/AddWinOrTie', (req, res) => {
+app.post('/AddWinOrTie', async (req, res) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   const { name } = req.oidc.user;
-
   const index = leaderboard.findIndex(player => player.UserName === name);
   if (index !== -1) {
     // Increment the wins or ties for the user
@@ -59,10 +91,31 @@ app.post('/AddWinOrTie', (req, res) => {
     // If the user is not in the leaderboard, add them with 1 win
     leaderboard.push({ UserName: name, TotalWins: 1 });
   }
-
   res.status(200).send('Win or tie added successfully.');
+
+  try {
+    // Ensure playerWinsCollection is initialized before accessing it
+    if (!playerWinsCollection) {
+      return res.status(500).send('Internal Server Error');
+    }
+    // Get player's profile and wins from MongoDB
+    const player = await getPlayerWins(name);
+
+    if (player) {
+      // If player exists, update the wins count
+      await playerWinsCollection.updateOne({ UserName: name }, { $inc: { TotalWins: 1 } });
+    } else {
+      // If player doesn't exist, insert a new document
+      await playerWinsCollection.insertOne({ UserName: name, TotalWins: 1 });
+    }
+
+  } catch (err) {
+    console.error("Error adding win or tie:", err);
+  }
+
 });
 
+setupMongoDB();
 
 app.options('/AddWinOrTie', cors());
 

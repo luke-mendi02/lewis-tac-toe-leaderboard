@@ -1,9 +1,15 @@
 function fetchLeaderboard() {
   fetch('https://lewis-tac-toe-leaderboard.azurewebsites.net/GetLewisTacToeLeaders')
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to fetch leaderboard');
+      }
+      return response.json();
+    })
     .then(data => {
       // Clear existing leaderboard
-      document.getElementById('leaderboard').innerHTML = '';
+      const leaderboardElement = document.getElementById('leaderboard');
+      leaderboardElement.innerHTML = '';
 
       // Update leaderboard with fetched data
       data.forEach((player, index) => {
@@ -13,7 +19,7 @@ function fetchLeaderboard() {
         
         const playerElement = document.createElement('div');
         playerElement.textContent = `#${playerRank}: ${playerName} - Wins: ${playerWins}`;
-        document.getElementById('leaderboard').appendChild(playerElement);
+        leaderboardElement.appendChild(playerElement);
       });
     })
     .catch(error => console.error('Error fetching leaderboard:', error));
