@@ -1,5 +1,5 @@
 function fetchLeaderboard() {
-  fetch('https://lewis-tac-toe-leaderboard.azurewebsites.net/GetLewisTacToeLeaders')
+  fetchfetch('https://lewis-tac-toe-leaderboard.azurewebsites.net/GetLewisTacToeLeaders')
     .then(response => {
       if (!response.ok) {
         throw new Error('Failed to fetch leaderboard');

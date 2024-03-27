@@ -1,13 +1,14 @@
-const express = require('express')
-app = express()
-
-const cors = require("cors")
+const express = require('express');
+app = express();
+const dotenv = require("dotenv")
+dotenv.config()
+const cors = require("cors");
 const { MongoClient } = require("mongodb");
 const { auth } = require('express-openid-connect');
 
 
 // Replace the uri string with your connection string.
-const uri = "mongodb+srv://lukecmendiola:F8BSLdDgGTfXILab@lewis-leaderboard.vpljd3h.mongodb.net/?retryWrites=true&w=majority&appName=Lewis-Leaderboard";
+const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@lewis-tac-toe-leaderboa.zzh6c3q.mongodb.net/?retryWrites=true&w=majority&appName=lewis-tac-toe-leaderboard`;
 const client = new MongoClient(uri);
 // MongoDB setup
 async function setupMongoDB() {
